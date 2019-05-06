@@ -10,7 +10,7 @@ import java.net.Socket
 
         try {
             val outStream = DataOutputStream(socket.getOutputStream())
-            outStream.writeUTF("Hello Pison.");
+            outStream.writeUTF("Hello.");
             outStream.flush();
 
             val inStream = DataInputStream(socket.getInputStream())
