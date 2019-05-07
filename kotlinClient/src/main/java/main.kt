@@ -23,15 +23,11 @@ fun main() {
     var lastData = 0
     var lastLast = 0
 
-    fun slope (data: Int): Int {
+    fun deriv (data: Int): Pair<Int,Int> {
         val delta = data - lastData
         lastLast = lastData
         lastData = data
-        return delta
-    }
-    
-    fun accel (data: Int): Int {
-        return data - 2*lastData - lastLast
+        return Pair(delta, (data - 2*lastData - lastLast))
     }
 
 
@@ -59,8 +55,7 @@ fun main() {
             }
 
             println(frame.timeStamp + " " + frame.data + " " +
-                    slope(frame.data!!.toInt()) + " " +
-                    accel(frame.data!!.toInt()) + " " +
+                    deriv(frame.data!!.toInt()) + " " +
                     frame.label + "  " + flag)
 
             if (count++ > maxLines) exitProcess(0)
