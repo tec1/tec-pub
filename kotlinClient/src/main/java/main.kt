@@ -31,13 +31,8 @@ fun main() {
     }
 
 
-    var lastLabel = "REST"
-
-    fun activationFound(label: String?): Boolean {
-        val result = (label == "ACTIVATION") && (lastLabel != label)
-        lastLabel  = label!!
-
-        return result
+    fun activationFound(data: String?, d1: Int, d2: Int): Boolean {
+        return (data!!.toInt() > 0) && (d1 > 5000) && (d2 < -10000)
     }
 
     try {
@@ -48,15 +43,14 @@ fun main() {
             val frame = Frame(it)
 
             var flag = ""
-            if (activationFound(frame.label)) {
+            val (d1, d2) = deriv(frame.data!!.toInt())
+            if (activationFound(frame.data, d1, d2)) {
                 writer.write(notification)
                 writer.flush()
                 flag = "** FOUND **"
             }
 
-            println(frame.timeStamp + " " + frame.data + " " +
-                    deriv(frame.data!!.toInt()) + " " +
-                    frame.label + "  " + flag)
+            println(frame.timeStamp + " " + frame.data + " " + d1 + " " + d2 + " " + frame.label + "  " + flag)
 
             if (count++ > maxLines) exitProcess(0)
         }
