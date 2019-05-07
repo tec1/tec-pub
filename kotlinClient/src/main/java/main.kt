@@ -1,6 +1,7 @@
 import java.io.InputStreamReader
 import java.net.Socket
 import org.json.JSONObject
+import java.io.DataOutputStream
 import kotlin.system.exitProcess
 
 fun main() {
@@ -17,18 +18,35 @@ fun main() {
         val label:     String? = this.optString("label")
     }
 
-        try {
-            InputStreamReader(socket.getInputStream()).forEachLine {
-//                println(it)
-                val frame = Frame(it)
-                println(">>>>   " + frame.timeStamp + " " + frame.data)
-                if (count++ > maxLines) exitProcess(0)
+    var lastLabel = "REST"
+
+    fun activationFound(label: String?): Boolean {
+        val result = (label == "ACTIVATION") && (lastLabel != label)
+        lastLabel = label!!
+
+        return result
+    }
+
+    try {
+        val outStream = DataOutputStream(socket.getOutputStream())
+        InputStreamReader(socket.getInputStream()).forEachLine {
+            val frame = Frame(it)
+
+            val found = activationFound(frame.label)
+            if (found) {
+                outStream.writeUTF("Activation classified\n");
+                outStream.flush();
             }
 
-        } catch (e: Exception) {
-            e.printStackTrace()
+            println(">>>>   " + frame.timeStamp + " " + frame.data + "  " + found)
 
-        } finally {
-            socket.close()
+            if (count++ > maxLines) exitProcess(0)
         }
+
+    } catch (e: Exception) {
+        e.printStackTrace()
+
+    } finally {
+        socket.close()
     }
+}
