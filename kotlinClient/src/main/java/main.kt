@@ -8,7 +8,7 @@ fun main() {
     println("Please enter the port number...")
 
     val notification = "Activation classified\n"
-    val maxLines     = 20
+    val maxLines     = 50
 
     val port   = readLine()!!.toInt()
     val socket = Socket("localhost", port)
@@ -18,6 +18,22 @@ fun main() {
         val data:      String? = this.optString("data")
         val label:     String? = this.optString("label")
     }
+
+
+    var lastData = 0
+    var lastLast = 0
+
+    fun slope (data: Int): Int {
+        val delta = data - lastData
+        lastLast = lastData
+        lastData = data
+        return delta
+    }
+    
+    fun accel (data: Int): Int {
+        return data - 2*lastData - lastLast
+    }
+
 
     var lastLabel = "REST"
 
@@ -42,7 +58,10 @@ fun main() {
                 flag = "** FOUND **"
             }
 
-            println(frame.timeStamp + " " + frame.data + " " + frame.label + "  " + flag)
+            println(frame.timeStamp + " " + frame.data + " " +
+                    slope(frame.data!!.toInt()) + " " +
+                    accel(frame.data!!.toInt()) + " " +
+                    frame.label + "  " + flag)
 
             if (count++ > maxLines) exitProcess(0)
         }
