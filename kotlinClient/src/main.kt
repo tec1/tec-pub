@@ -1,25 +1,23 @@
-import java.io.DataInputStream
-import java.io.DataOutputStream
+import java.io.InputStreamReader
 import java.net.Socket
+import kotlin.system.exitProcess
 
-    fun main() {
+fun main() {
+    val port = readLine()!!.toInt()
+    val socket = Socket("localhost", port)
+    val maxLines = 20
+    var count = 0
 
-        val socket = Socket("localhost", 51366)
-        var buf = ""
-        var len = 0
+    try {
+            InputStreamReader(socket.getInputStream()).forEachLine {
+                println(it)
+                if (count++ > maxLines) exitProcess(0)
+            }
 
-        try {
-            val outStream = DataOutputStream(socket.getOutputStream())
-            outStream.writeUTF("Hello.");
-            outStream.flush();
-
-            val inStream = DataInputStream(socket.getInputStream())
-            buf = inStream.readUTF()
         } catch (e: Exception) {
             e.printStackTrace()
+
         } finally {
-            println(len)
-            println(buf)
             socket.close()
         }
     }
