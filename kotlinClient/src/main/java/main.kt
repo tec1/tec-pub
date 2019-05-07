@@ -1,16 +1,17 @@
 import java.io.InputStreamReader
 import java.net.Socket
 import org.json.JSONObject
-import java.io.DataOutputStream
+import java.io.OutputStreamWriter
 import kotlin.system.exitProcess
 
 fun main() {
     println("Please enter the port number...")
 
-    val port = readLine()!!.toInt()
+    val notification = "Activation classified\n"
+    val maxLines     = 20
+
+    val port   = readLine()!!.toInt()
     val socket = Socket("localhost", port)
-    val maxLines = 20
-    var count = 0
 
     class Frame(json: String) : JSONObject(json) {
         val timeStamp: String? = this.optString("timeStamp")
@@ -22,23 +23,26 @@ fun main() {
 
     fun activationFound(label: String?): Boolean {
         val result = (label == "ACTIVATION") && (lastLabel != label)
-        lastLabel = label!!
+        lastLabel  = label!!
 
         return result
     }
 
     try {
-        val outStream = DataOutputStream(socket.getOutputStream())
+        val writer = OutputStreamWriter(socket.getOutputStream())
+
+        var count = 0
         InputStreamReader(socket.getInputStream()).forEachLine {
             val frame = Frame(it)
 
-            val found = activationFound(frame.label)
-            if (found) {
-                outStream.writeUTF("Activation classified\n");
-                outStream.flush();
+            var flag = ""
+            if (activationFound(frame.label)) {
+                writer.write(notification)
+                writer.flush()
+                flag = "** FOUND **"
             }
 
-            println(">>>>   " + frame.timeStamp + " " + frame.data + "  " + found)
+            println(frame.timeStamp + " " + frame.data + " " + frame.label + "  " + flag)
 
             if (count++ > maxLines) exitProcess(0)
         }
