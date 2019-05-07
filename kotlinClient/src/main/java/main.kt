@@ -8,12 +8,13 @@ fun main() {
     println("Please enter the port number...")
 
     val notification = "Activation classified\n"
-    val maxLines     = 50
+    val maxFrames    = 50
 
-    val port   = readLine()!!.toInt()
-    val socket = Socket("localhost", port)
+    val port       = readLine()!!.toInt()
+    val socket     = Socket("localhost", port)
+    var numFrames  = 0
 
-    class Frame(json: String) : JSONObject(json) {
+    class Frame(json: String): JSONObject(json) {
         val timeStamp: String? = this.optString("timeStamp")
         val data:      String? = this.optString("data")
         val label:     String? = this.optString("label")
@@ -21,7 +22,7 @@ fun main() {
 
 
     var lastData = 0
-    var lastLast = 0
+    var lastLast: Int
 
     fun deriv (data: Int): Pair<Int,Int> {
         val delta = data - lastData
@@ -31,19 +32,18 @@ fun main() {
     }
 
 
-    fun activationFound(data: String?, d1: Int, d2: Int): Boolean {
-        return (data!!.toInt() > 0) && (d1 > 5000) && (d2 < -10000)
-    }
+    fun activationFound(data: String?, d1: Int, d2: Int) =
+        (data!!.toInt() > 0) && (d1 > 5000) && (d2 < -10000)
 
     try {
-        val writer = OutputStreamWriter(socket.getOutputStream())
+        val writer     = OutputStreamWriter(socket.getOutputStream())
 
-        var count = 0
         InputStreamReader(socket.getInputStream()).forEachLine {
             val frame = Frame(it)
 
             var flag = ""
             val (d1, d2) = deriv(frame.data!!.toInt())
+
             if (activationFound(frame.data, d1, d2)) {
                 writer.write(notification)
                 writer.flush()
@@ -52,7 +52,7 @@ fun main() {
 
             println(frame.timeStamp + " " + frame.data + " " + d1 + " " + d2 + " " + frame.label + "  " + flag)
 
-            if (count++ > maxLines) exitProcess(0)
+            if (numFrames++ > maxFrames) exitProcess(0)
         }
 
     } catch (e: Exception) {
