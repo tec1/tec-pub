@@ -15,17 +15,17 @@ import kotlin.system.exitProcess
  *
  * An earlier heuristic was considered based on the 1st and 2nd derivative of the input data.
  *
- * @author Eric Christiansen
+ * @author Eric Christiansen, http://www.linkedin.com/in/techristiansen
  */
 fun main(
 ) {
     val NOTIFICATION = "Activation classified\n"
     val MAX_FRAMES   = 200
-    val MIN_PERCENT  = 28
-    val MAX_NOISE    = 3
+    val MIN_PERCENT  = 25
+    val MAX_NOISE    = 2
     
     var numFrames = 0
-    var maxData = Int.MIN_VALUE
+    var maxData = 80000
     var minData = Int.MAX_VALUE
     
     class Frame(
@@ -80,19 +80,19 @@ fun percent(
  */
 var numNoise = MAX_NOISE
 var percent = 0
-var lastFound = false
 
 fun activationFound(
     intData: Int
 ): Boolean {
     percent = percent(intData)
     var found = (percent > MIN_PERCENT)
-    
-    if (found != lastFound) numNoise = 0
+
+    // Reset noise counter
+    if (found) numNoise = 0
     else numNoise++
     
+    // Allow 1 or 2 values to fall below minimum percent
     found = (numNoise < MAX_NOISE) || found
-    lastFound = found
     
     return found
 }
@@ -105,7 +105,7 @@ fun activationFound(
 
     try {
         val writer = OutputStreamWriter(socket.getOutputStream())
-//      val inputStream = File("some.json").inputStream()
+//      val inputStream = File("some.json").inputStream()               /* TEST DATA */
         val inputStream = socket.getInputStream()
         
         InputStreamReader(inputStream).forEachLine {
