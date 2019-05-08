@@ -1,98 +1,136 @@
-import java.io.InputStreamReader
 import org.json.JSONObject
-import java.io.File
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.Socket
 import kotlin.system.exitProcess
 
-fun main() {
-    // println("Please enter the port number...")
-
-    // val notification = "Activation classified\n"
-    val maxFrames  = 200
-    val minPercent = 25
-    val maxNoise   = 2
-
-    //val port       = readLine()!!.toInt()
-    //val socket     = Socket("localhost", port)
+/**
+ * Challenge exercise.
+ *
+ * This function reads frames from an input socket and classifies activations.  When an activation is found it notifies
+ * the server via the output socket.
+ *
+ * Classification is done by sampling the input data. When the data value exceeds MIN_PERCENT it is considered to have
+ * found an activation.  The algorithm allows 1 data point (configurable) to drop below the threshold.
+ *
+ * An earlier heuristic was considered based on the 1st and 2nd derivative of the input data.
+ *
+ * @author Eric Christiansen
+ */
+fun main(
+) {
+    val NOTIFICATION = "Activation classified\n"
+    val MAX_FRAMES   = 200
+    val MIN_PERCENT  = 28
+    val MAX_NOISE    = 3
+    
     var numFrames = 0
     var maxData = Int.MIN_VALUE
     var minData = Int.MAX_VALUE
-
-    class Frame(json: String) : JSONObject(json) {
+    
+    class Frame(
+        json: String
+    ) : JSONObject(json) {
         val timeStamp: String? = this.optString("timeStamp")
         val data: String? = this.optString("data")
         val label: String? = this.optString("label")
     }
+    
+    
+/**
+ * This (now unused) function calculates the derivatives of the input data.
+ * @return Pair containing the 1st and 2nd derivatives.
+ */
+var lastData = 0
+var lastLast: Int
+
+fun deriv(
+    data: Int
+): Pair<Int, Int> {
+    val delta = data - lastData
+    lastLast = lastData
+    lastData = data
+
+    return Pair(delta, (data - 2*lastData - lastLast))
+}
+    
+    
+/**
+ * Calculates the range of data values and returns the percent of that range for the current data point.
+ * @return the percent of range for the current data point.
+ */
+val VALID_RANGE = 25000
+var range: Int
+
+fun percent(
+    intData: Int
+): Int {
+    maxData = Math.max(intData, maxData)
+    minData = Math.min(intData, minData)
+    range = Math.max((maxData - minData), 1)
+    if (range < VALID_RANGE) return 0
+    
+    return 100 * (intData - minData) / range
+}
 
 
-    var lastData = 0
-    var lastLast: Int
+/**
+ * Based on the percent of range, determines if the current data point indicates an activation event.
+ * @return true if the current data point indicates an activation.
+ */
+var numNoise = MAX_NOISE
+var percent = 0
+var lastFound = false
 
-    fun deriv(data: Int): Pair<Int, Int> {
-        val delta = data - lastData
-        lastLast = lastData
-        lastData = data
-        return Pair(delta, (data - 2 * lastData - lastLast))
-    }
+fun activationFound(
+    intData: Int
+): Boolean {
+    percent = percent(intData)
+    var found = (percent > MIN_PERCENT)
+    
+    if (found != lastFound) numNoise = 0
+    else numNoise++
+    
+    found = (numNoise < MAX_NOISE) || found
+    lastFound = found
+    
+    return found
+}
 
 
-    var range:       Int
-    val validRange = 85000
-
-    fun percent(intData: Int): Int {
-        maxData = Math.max(intData, maxData)
-        minData = Math.min(intData, minData)
-        range   = Math.max((maxData - minData), 1)
-        if (range < validRange) return 0
-
-        return 100 * (intData - minData) / range
-    }
-
-
-    var numNoise = maxNoise
-    var percent  = 0
-
-    fun activationFound(intData: Int, d1: Int, d2: Int): Boolean {
-        percent   = percent(intData)
-        var found = (percent > minPercent)
-        // (intData > 0) && (d1 > 5000) && (d2 < -10000)
-
-        if (found) numNoise = 0
-        else numNoise++
-
-        found = (numNoise < maxNoise) || found
-
-        return found
-    }
+/* Main block */
+    println("Please enter the port number...")
+    val port= readLine()!!.toInt()
+    val socket   = Socket("localhost", port)
 
     try {
-        //val writer = OutputStreamWriter(socket.getOutputStream())
-        val inputstream = File("some.json").inputStream()
-        //val inputstream = socket.getInputStream()
-
-        InputStreamReader(inputstream).forEachLine {
-            val frame   = Frame(it)
+        val writer = OutputStreamWriter(socket.getOutputStream())
+//      val inputStream = File("some.json").inputStream()
+        val inputStream = socket.getInputStream()
+        
+        InputStreamReader(inputStream).forEachLine {
+            val frame = Frame(it)
             val intData = frame.data!!.toInt()
-
+            
             var flag = ""
-            val (d1, d2) = deriv(intData)
-
-            if (activationFound(intData, d1, d2)) {
-                //writer.write(notification)
-                //writer.flush()
+            
+            if (activationFound(intData)) {
+                writer.write(NOTIFICATION)
+                writer.flush()
                 flag = "** FOUND **"
             }
-
-            println(frame.timeStamp + " " + intData + " " + d1 + " " + d2 + " " + frame.label +
-                    "  " + minData + "  " + maxData + "  " + percent +
-                    "  " + flag)
-
-            if (numFrames++ > maxFrames) exitProcess(0)
+            
+            println(
+                frame.timeStamp + " " + intData + " " + frame.label + "  " + percent + "  " + flag
+            )
+            
+            if (numFrames++ > MAX_FRAMES) exitProcess(0)
         }
-
+        
     } catch (e: Exception) {
         e.printStackTrace()
-
+        
     } finally {
-        //socket.close()
+        socket.close()
     }
 }
